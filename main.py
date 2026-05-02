@@ -30,7 +30,7 @@ CHANNEL_ID = os.getenv("CHANNEL_ID", "@sovchirr")
 CHANNEL_LINK = os.getenv("CHANNEL_LINK", "https://t.me/sovchirr")
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:ksUmAcMyjgW**************************@tramway.proxy.rlwy.net:25886/railway")
 
-
+# === RASM FILE_ID LARI ===
 KUYOV_IMAGES = {
     "kuyov_1": "AgACAgIAAxkBAANpafW0GS8joU1koM1fcZwyOgKLd_gAApITaxuDW7FLrZRTmWK70xQBAAMCAAN4AAM7BA",  # 1-variant
     "kuyov_2": "AgACAgIAAxkBAANrafW0Nt-944ACisItLE23a7KhockAApMTaxuDW7FLvVAq2wxPu7ABAAMCAAN4AAM7BA",  # 2-variant
