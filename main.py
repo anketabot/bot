@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
 @sovchirr - Telegram E'lon Bot
-Single-file aiogram 3.x implementation
-PostgreSQL + Railway + Rasm bilan e'lon
+PostgreSQL + 4 ta kanal + avtomatik e'lon raqami
 """
 
 import os
@@ -26,22 +25,44 @@ load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_IDS = [int(x.strip()) for x in os.getenv("ADMIN_IDS", "").split(",") if x.strip()]
-CHANNEL_ID = os.getenv("CHANNEL_ID", "@sovchirr")
-CHANNEL_LINK = os.getenv("CHANNEL_LINK", "https://t.me/sovchirr")
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:ksUmAcMyjgW**************************@tramway.proxy.rlwy.net:25886/railway")
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+
+# 4 ta kanal
+CHANNELS = {
+    "ch1": {
+        "id": os.getenv("CH1_ID", "@sovchirr"),
+        "link": os.getenv("CH1_LINK", "https://t.me/sovchirr"),
+        "name": os.getenv("CH1_NAME", "@sovchirr"),
+    },
+    "ch2": {
+        "id": os.getenv("CH2_ID", ""),
+        "link": os.getenv("CH2_LINK", ""),
+        "name": os.getenv("CH2_NAME", ""),
+    },
+    "ch3": {
+        "id": os.getenv("CH3_ID", ""),
+        "link": os.getenv("CH3_LINK", ""),
+        "name": os.getenv("CH3_NAME", ""),
+    },
+    "ch4": {
+        "id": os.getenv("CH4_ID", ""),
+        "link": os.getenv("CH4_LINK", ""),
+        "name": os.getenv("CH4_NAME", ""),
+    },
+}
 
 # === RASM FILE_ID LARI ===
 KUYOV_IMAGES = {
-    "kuyov_1": "AgACAgIAAxkBAANpafW0GS8joU1koM1fcZwyOgKLd_gAApITaxuDW7FLrZRTmWK70xQBAAMCAAN4AAM7BA",  # 1-variant
-    "kuyov_2": "AgACAgIAAxkBAANrafW0Nt-944ACisItLE23a7KhockAApMTaxuDW7FLvVAq2wxPu7ABAAMCAAN4AAM7BA",  # 2-variant
+    "kuyov_1": os.getenv("KUYOV_IMG1", ""),
+    "kuyov_2": os.getenv("KUYOV_IMG2", ""),
 }
 KELIN_IMAGES = {
-    "kelin_1": "AgACAgIAAxkBAANhafWz3mW99BCFhjT6-Lg_ZQimGzYAAo4TaxuDW7FL9wnSEedKwrEBAAMCAAN5AAM7BA",
-    "kelin_2": "AgACAgIAAxkBAANjafWz8agqAnSX7Yq6zPt81vlGYmQAAo8TaxuDW7FLVrCKqNtxKaIBAAMCAAN5AAM7BA",
-    "kelin_3": "AgACAgIAAxkBAANlafWz-wR1nHjrZ0SYd_inQX3MqdEAApATaxuDW7FLEE4DH6pkNHkBAAMCAAN4AAM7BA",
+    "kelin_1": os.getenv("KELIN_IMG1", ""),
+    "kelin_2": os.getenv("KELIN_IMG2", ""),
+    "kelin_3": os.getenv("KELIN_IMG3", ""),
 }
-KUYOV2_IMAGE = "AgACAgIAAxkBAANnafW0D0VKI1z0rMQ1mpAjm791whsAApETaxuDW7FLPPbcNASW-d8BAAMCAAN4AAM7BA"  # 2-ro'zg'or uchun default
-KELIN2_IMAGE = "AgACAgIAAxkBAANnafW0D0VKI1z0rMQ1mpAjm791whsAApETaxuDW7FLPPbcNASW-d8BAAMCAAN4AAM7BA"  # 2-ro'zg'or uchun default
+KUYOV2_IMAGE = os.getenv("KUYOV2_IMG", "")
+KELIN2_IMAGE = os.getenv("KELIN2_IMG", "")
 
 ZODIAC_SIGNS = {
     "qoy": ("Qo'y", "♈"),
@@ -144,6 +165,7 @@ class AnnouncementState(StatesGroup):
     partner_other = State()
     contact = State()
     preview = State()
+    channel_selection = State()
 
 # ============================================================
 # DATABASE (PostgreSQL)
@@ -191,9 +213,32 @@ async def init_db():
                 partner_education TEXT,
                 partner_residence TEXT,
                 partner_other TEXT,
-                contact TEXT
+                contact TEXT,
+                channel_id TEXT,
+                channel_name TEXT
             )
         """)
+        # Counter for announcement numbers
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS announcement_counter (
+                id SERIAL PRIMARY KEY,
+                current_number INTEGER DEFAULT 0
+            )
+        """)
+        await conn.execute("""
+            INSERT INTO announcement_counter (id, current_number) VALUES (1, 0)
+            ON CONFLICT (id) DO NOTHING
+        """)
+    finally:
+        await conn.close()
+
+async def get_next_announcement_number() -> int:
+    conn = await get_db()
+    try:
+        row = await conn.fetchrow(
+            "UPDATE announcement_counter SET current_number = current_number + 1 WHERE id = 1 RETURNING current_number"
+        )
+        return row["current_number"]
     finally:
         await conn.close()
 
@@ -236,30 +281,6 @@ async def get_announcement(ann_id: int):
     finally:
         await conn.close()
 
-async def get_pending_announcements():
-    conn = await get_db()
-    try:
-        rows = await conn.fetch("SELECT * FROM announcements WHERE status = 'pending' ORDER BY created_at DESC")
-        return [dict(row) for row in rows]
-    finally:
-        await conn.close()
-
-async def update_announcement_status(ann_id: int, status: str, message_id: int = None):
-    conn = await get_db()
-    try:
-        if message_id:
-            await conn.execute(
-                "UPDATE announcements SET status = $1, posted_at = NOW(), message_id = $2 WHERE id = $3",
-                status, message_id, ann_id
-            )
-        else:
-            await conn.execute(
-                "UPDATE announcements SET status = $1 WHERE id = $2",
-                status, ann_id
-            )
-    finally:
-        await conn.close()
-
 async def get_user_announcements(user_id: int):
     conn = await get_db()
     try:
@@ -267,6 +288,22 @@ async def get_user_announcements(user_id: int):
             "SELECT * FROM announcements WHERE user_id = $1 ORDER BY created_at DESC", user_id
         )
         return [dict(row) for row in rows]
+    finally:
+        await conn.close()
+
+async def update_announcement_status(ann_id: int, status: str, message_id: int = None, channel_id: str = None, channel_name: str = None):
+    conn = await get_db()
+    try:
+        if message_id and channel_id:
+            await conn.execute(
+                "UPDATE announcements SET status = $1, posted_at = NOW(), message_id = $2, channel_id = $3, channel_name = $4 WHERE id = $5",
+                status, message_id, channel_id, channel_name, ann_id
+            )
+        else:
+            await conn.execute(
+                "UPDATE announcements SET status = $1 WHERE id = $2",
+                status, ann_id
+            )
     finally:
         await conn.close()
 
@@ -279,21 +316,32 @@ def get_zodiac_display(zodiac_key: str) -> str:
 
 def get_compatibility_text(zodiac_key: str) -> tuple:
     data = ZODIAC_COMPATIBILITY.get(zodiac_key, {})
-    mos_list = data.get("mos", [])[:3]  # Faqat 3 ta eng mos
+    mos_list = data.get("mos", [])[:3]
     qiyin_list = data.get("qiyin", [])
     mos_text = ", ".join([get_zodiac_display(z) for z in mos_list]) if mos_list else "Mavjud emas"
     qiyin_text = ", ".join([get_zodiac_display(z) for z in qiyin_list]) if qiyin_list else "Mavjud emas"
     return mos_text, qiyin_text
 
-def format_announcement(data: dict) -> str:
+def format_announcement(data: dict, ann_number: int = None, channel_key: str = "ch1") -> str:
     ann_type = data.get("announcement_type", "")
+    num_str = f" №{ann_number}" if ann_number else ""
+
     if "kuyov" in ann_type:
-        header = "E'LON | KUYOV NOMZODI:"
+        if "2" in ann_type:
+            header = f"E'LON{num_str} | KUYOV NOMZODI 2-RO'ZG'ORGA:"
+        else:
+            header = f"E'LON{num_str} | KUYOV NOMZODI:"
     else:
-        header = "E'LON | KELIN NOMZODI:"
+        if "2" in ann_type:
+            header = f"E'LON{num_str} | KELIN NOMZODI 2-RO'ZG'ORGA:"
+        else:
+            header = f"E'LON{num_str} | KELIN NOMZODI:"
 
     zodiac = data.get("zodiac", "")
     mos, qiyin = get_compatibility_text(zodiac)
+
+    ch_info = CHANNELS.get(channel_key, CHANNELS["ch1"])
+    ch_name = ch_info.get("name", "@sovchirr")
 
     text = f"<b>{header}</b>\n\n"
     text += f"<b>Ismi:</b> {data.get('name_age', '---')}\n"
@@ -318,11 +366,11 @@ def format_announcement(data: dict) -> str:
     text += f"<b>Yashash joyi:</b> {data.get('partner_residence', '---')}\n"
     text += f"<b>Boshqa talablar:</b> {data.get('partner_other', '---')}\n\n"
     text += f"<b>Aloqa uchun:</b> {data.get('contact', '---')}\n\n"
-    text += "<b>KANALGA OBUNA BO'LISH</b> @sovchirr"
+    text += f"<b>KANALGA OBUNA BO'LISH</b> {ch_name}"
     return text
 
 def is_valid_file_id(file_id: str) -> bool:
-    return bool(file_id and not file_id.startswith("YOUR_FILE_ID"))
+    return bool(file_id and file_id.strip() and not file_id.startswith("YOUR_FILE_ID"))
 
 # ============================================================
 # KEYBOARDS
@@ -331,7 +379,6 @@ def main_menu_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📝 Yangi e'lon berish", callback_data="new_announcement")],
         [InlineKeyboardButton(text="📋 Mening e'lonlarim", callback_data="my_announcements")],
-        [InlineKeyboardButton(text="📢 Kanalga o'tish", url=CHANNEL_LINK)]
     ])
 
 def announcement_type_keyboard():
@@ -406,7 +453,7 @@ def yes_no_keyboard(prefix: str):
 
 def preview_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✅ Kanalga yuborish", callback_data="confirm_yes")],
+        [InlineKeyboardButton(text="✅ Kanallarga yuborish", callback_data="confirm_yes")],
         [InlineKeyboardButton(text="🔄 Qayta to'ldirish", callback_data="confirm_restart")],
         [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="cancel")]
     ])
@@ -440,7 +487,7 @@ async def cmd_start(message: Message):
 async def cmd_file_id(message: Message):
     if message.photo:
         file_id = message.photo[-1].file_id
-        await message.answer(f"<b>Rasm file_id:</b>\n<code>{file_id}</code>\n\nBu kodni main.py dagi rasm o'zgaruvchilariga qo'ying.", parse_mode="HTML")
+        await message.answer(f"<b>Rasm file_id:</b>\n<code>{file_id}</code>\n\nBu kodni .env faylga qo'ying.", parse_mode="HTML")
     else:
         await message.answer("Rasm yuboring, men uning file_id sini beraman.")
 
@@ -564,7 +611,6 @@ async def process_photo_selection(callback: CallbackQuery, state: FSMContext, bo
 
     await state.update_data(photo_file_id=file_id)
 
-    # Delete photo messages
     data = await state.get_data()
     msg_ids = data.get("photo_msg_ids", [])
     for msg_id in msg_ids:
@@ -573,7 +619,6 @@ async def process_photo_selection(callback: CallbackQuery, state: FSMContext, bo
         except Exception:
             pass
 
-    # Delete selection message
     try:
         await callback.message.delete()
     except Exception:
@@ -805,7 +850,6 @@ async def process_contact(message: Message, state: FSMContext):
     await state.update_data(contact=message.text)
     data = await state.get_data()
     ann_id = data.get("ann_id")
-    # Only save fields that exist in DB table
     db_fields = [
         "announcement_type", "photo_file_id", "name_age", "nationality",
         "height_weight", "education", "marital_status", "children",
@@ -829,32 +873,63 @@ async def process_contact(message: Message, state: FSMContext):
 async def confirm_announcement(callback: CallbackQuery, state: FSMContext, bot: Bot):
     data = await state.get_data()
     ann_id = data.get("ann_id")
-    await update_announcement_status(ann_id, "approved")
-    await state.clear()
     ann_data = await get_announcement(ann_id)
-    text = format_announcement(ann_data)
+
+    # Get next announcement number
+    ann_number = await get_next_announcement_number()
+
     photo_file_id = ann_data.get("photo_file_id", "")
+    success_channels = []
+    failed_channels = []
 
-    try:
-        if is_valid_file_id(photo_file_id):
-            msg = await bot.send_photo(
-                CHANNEL_ID,
-                photo=photo_file_id,
-                caption=text,
-                parse_mode="HTML"
-            )
-            await update_announcement_status(ann_id, "approved", msg.message_id)
-        else:
-            msg = await bot.send_message(CHANNEL_ID, text, parse_mode="HTML")
-            await update_announcement_status(ann_id, "approved", msg.message_id)
+    for ch_key, ch_info in CHANNELS.items():
+        ch_id = ch_info.get("id", "")
+        ch_name = ch_info.get("name", "")
 
+        if not ch_id or not ch_name:
+            continue
+
+        text = format_announcement(ann_data, ann_number, ch_key)
+
+        try:
+            if is_valid_file_id(photo_file_id):
+                msg = await bot.send_photo(
+                    ch_id,
+                    photo=photo_file_id,
+                    caption=text,
+                    parse_mode="HTML"
+                )
+            else:
+                msg = await bot.send_message(ch_id, text, parse_mode="HTML")
+
+            success_channels.append(ch_name)
+
+            # Save first channel info to DB
+            if not success_channels[:-1]:
+                await update_announcement_status(ann_id, "approved", msg.message_id, ch_id, ch_name)
+
+        except Exception as e:
+            failed_channels.append(f"{ch_name}: {str(e)}")
+
+    await state.clear()
+
+    if success_channels:
+        success_text = "<b>✅ E'loningiz quyidagi kanallarga yuborildi:</b>\n"
+        for ch in success_channels:
+            success_text += f"• {ch}\n"
+
+        if failed_channels:
+            success_text += "\n<b>❌ Quyidagi kanallarga yuborilmadi:</b>\n"
+            for fail in failed_channels:
+                success_text += f"• {fail}\n"
+
+        success_text += f"\n<b>E'lon raqami:</b> №{ann_number}"
+
+        await callback.message.edit_text(success_text, parse_mode="HTML")
+    else:
         await callback.message.edit_text(
-            "<b>✅ E'loningiz kanalga muvaffaqiyatli yuborildi!</b>",
-            parse_mode="HTML"
-        )
-    except Exception as e:
-        await callback.message.edit_text(
-            f"<b>❌ Xatolik yuz berdi:</b> {str(e)}\n\nIltimos, admin bilan bog'laning.",
+            "<b>❌ E'lonni hech qaysi kanalga yuborib bo'lmadi.</b>\n\n"
+            "Iltimos, admin bilan bog'laning.",
             parse_mode="HTML"
         )
 
@@ -882,11 +957,21 @@ async def my_announcements(callback: CallbackQuery):
             parse_mode="HTML"
         )
         return
+
     text = "<b>📋 Sizning e'lonlaringiz:</b>\n\n"
     for ann in anns:
         status = ann.get("status", "pending")
-        status_text = {"pending": "⏳ Kutilmoqda", "approved": "✅ Kanalga yuborilgan", "rejected": "❌ Rad etilgan"}.get(status, status)
-        text += f"🆔 #{ann['id']} - {status_text}\n"
+        status_text = {"pending": "⏳ Kutilmoqda", "approved": "✅ Yuborilgan"}.get(status, status)
+        ch_name = ann.get("channel_name", "")
+        ch_str = f" ({ch_name})" if ch_name else ""
+        text += f"🆔 #{ann['id']}{ch_str} - {status_text}\n"
+
+        # Show full announcement details
+        text += f"👤 {ann.get('name_age', '---')}\n"
+        text += f"📍 {ann.get('residence', '---')}\n"
+        text += f"📞 {ann.get('contact', '---')}\n"
+        text += "────────────\n"
+
     await callback.message.edit_text(text, reply_markup=main_menu_keyboard(), parse_mode="HTML")
 
 # ============================================================
