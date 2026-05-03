@@ -1038,17 +1038,8 @@ async def cancel_process(callback: CallbackQuery, state: FSMContext):
     )
 
 
-# ============================================================
-# MENING E'LONLARIM - YANGI TUZILISH
-# ============================================================
 async def _show_single_announcement(callback_or_message, bot: Bot, ann: dict, from_list: bool = True):
-    """Bitta e'lonni to'liq ko'rsatish (rasm + matn + o'chirish tugmasi)"""
-    status = ann.get("status", "pending")
-    status_text = {"pending": "⏳ Kutilmoqda", "approved": "✅ Yuborilgan", "deleted": "🗑 O'chirilgan"}.get(status, status)
-
     ann_number = ann.get("id")
-
-    # Kanal kalitini topish
     channel_key = "ch1"
     for ch_key, ch_info in CHANNELS.items():
         if ch_info.get("name") == ann.get("channel_name"):
@@ -1056,12 +1047,11 @@ async def _show_single_announcement(callback_or_message, bot: Bot, ann: dict, fr
             break
 
     text = format_announcement(ann, ann_number, channel_key)
-    text = f"<b>📋 E'lon #{ann['id']}</b>\n<b>Status:</b> {status_text}\n\n{text}"
+    text = f"<b>📋 E'lon #{ann['id']}</b>\n\n{text}"
 
     photo_file_id = ann.get("photo_file_id", "")
-
-    # Klaviatura
     kb = []
+    status = ann.get("status", "pending")
     if status == "approved" and ann.get("message_id") and ann.get("channel_id"):
         kb.append([InlineKeyboardButton(text="🗑 E'lonni o'chirish", callback_data=f"delann_{ann['id']}")])
 
@@ -1072,11 +1062,9 @@ async def _show_single_announcement(callback_or_message, bot: Bot, ann: dict, fr
 
     markup = InlineKeyboardMarkup(inline_keyboard=kb)
 
-    # Agar rasm bo'lsa - rasm bilan yuborish
     if is_valid_file_id(photo_file_id):
         try:
             if hasattr(callback_or_message, 'message'):
-                # CallbackQuery
                 await callback_or_message.message.delete()
                 await bot.send_photo(
                     chat_id=callback_or_message.from_user.id,
@@ -1086,7 +1074,6 @@ async def _show_single_announcement(callback_or_message, bot: Bot, ann: dict, fr
                     parse_mode="HTML"
                 )
             else:
-                # Message
                 await callback_or_message.delete()
                 await bot.send_photo(
                     chat_id=callback_or_message.chat.id,
@@ -1099,12 +1086,10 @@ async def _show_single_announcement(callback_or_message, bot: Bot, ann: dict, fr
         except Exception:
             pass
 
-    # Rasm yo'q yoki xatolik bo'lsa - matn bilan
     if hasattr(callback_or_message, 'message'):
         await callback_or_message.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
     else:
         await callback_or_message.edit_text(text, reply_markup=markup, parse_mode="HTML")
-
 
 @router.callback_query(F.data == "my_announcements")
 async def my_announcements(callback: CallbackQuery, bot: Bot):
@@ -1117,21 +1102,17 @@ async def my_announcements(callback: CallbackQuery, bot: Bot):
         )
         return
 
-    # Agar faqat 1 ta e'lon bo'lsa - to'liq ko'rsatish
     if len(anns) == 1:
         ann = anns[0]
         await _show_single_announcement(callback, bot, ann, from_list=False)
         return
 
-    # Agar 2+ ta bo'lsa - ro'yxat ko'rsatish
     text = "<b>📋 Sizning e'lonlaringiz:</b>\n\nBatafsil ko'rish uchun tanlang:"
     kb = []
     for ann in anns:
-        status = ann.get("status", "pending")
-        status_emoji = {"pending": "⏳", "approved": "✅", "deleted": "🗑"}.get(status, "⏳")
         name = ann.get('name_age', '---')
         kb.append([InlineKeyboardButton(
-            text=f"{status_emoji} E'lon #{ann['id']} - {name}",
+            text=f"📄 E'lon #{ann['id']} - {name}",
             callback_data=f"view_ann_{ann['id']}"
         )])
 
@@ -1171,8 +1152,6 @@ async def delete_announcement(callback: CallbackQuery, bot: Bot):
 
     await update_announcement_status(ann_id, "deleted")
     await callback.answer("E'lon kanaldan o'chirildi!")
-
-    # O'chirgandan keyin ro'yxatga qaytish
     await my_announcements(callback, bot)
 
 
