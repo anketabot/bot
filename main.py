@@ -1062,10 +1062,14 @@ async def _show_single_announcement(callback_or_message, bot: Bot, ann: dict, fr
 
     markup = InlineKeyboardMarkup(inline_keyboard=kb)
 
+    # Rasm bo'lsa - eski xabarni o'chirish va yangi rasm yuborish
     if is_valid_file_id(photo_file_id):
         try:
             if hasattr(callback_or_message, 'message'):
-                await callback_or_message.message.delete()
+                try:
+                    await callback_or_message.message.delete()
+                except Exception:
+                    pass
                 await bot.send_photo(
                     chat_id=callback_or_message.from_user.id,
                     photo=photo_file_id,
@@ -1074,7 +1078,10 @@ async def _show_single_announcement(callback_or_message, bot: Bot, ann: dict, fr
                     parse_mode="HTML"
                 )
             else:
-                await callback_or_message.delete()
+                try:
+                    await callback_or_message.delete()
+                except Exception:
+                    pass
                 await bot.send_photo(
                     chat_id=callback_or_message.chat.id,
                     photo=photo_file_id,
@@ -1086,10 +1093,27 @@ async def _show_single_announcement(callback_or_message, bot: Bot, ann: dict, fr
         except Exception:
             pass
 
-    if hasattr(callback_or_message, 'message'):
-        await callback_or_message.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
-    else:
-        await callback_or_message.edit_text(text, reply_markup=markup, parse_mode="HTML")
+    # Matn bilan - edit yoki send
+    try:
+        if hasattr(callback_or_message, 'message'):
+            await callback_or_message.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
+        else:
+            await callback_or_message.edit_text(text, reply_markup=markup, parse_mode="HTML")
+    except Exception:
+        if hasattr(callback_or_message, 'message'):
+            await bot.send_message(
+                chat_id=callback_or_message.from_user.id,
+                text=text,
+                reply_markup=markup,
+                parse_mode="HTML"
+            )
+        else:
+            await bot.send_message(
+                chat_id=callback_or_message.chat.id,
+                text=text,
+                reply_markup=markup,
+                parse_mode="HTML"
+            )
 
 @router.callback_query(F.data == "my_announcements")
 async def my_announcements(callback: CallbackQuery, bot: Bot):
@@ -1117,7 +1141,21 @@ async def my_announcements(callback: CallbackQuery, bot: Bot):
         )])
 
     kb.append([InlineKeyboardButton(text="🔙 Asosiy menyu", callback_data="back_main")])
-    await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=kb), parse_mode="HTML")
+
+    # Rasm xabar bo'lsa edit_text ishlamaydi - o'chirib yangi yuborish
+    try:
+        await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=kb), parse_mode="HTML")
+    except Exception:
+        try:
+            await callback.message.delete()
+        except Exception:
+            pass
+        await bot.send_message(
+            chat_id=callback.from_user.id,
+            text=text,
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=kb),
+            parse_mode="HTML"
+        )
 
 
 @router.callback_query(F.data.startswith("view_ann_"))
@@ -1154,14 +1192,24 @@ async def delete_announcement(callback: CallbackQuery, bot: Bot):
     await callback.answer("E'lon kanaldan o'chirildi!")
     await my_announcements(callback, bot)
 
-
 @router.callback_query(F.data == "back_main")
 async def back_to_main(callback: CallbackQuery):
-    await callback.message.edit_text(
-        "<b>Asosiy menyu:</b>",
-        reply_markup=main_menu_keyboard(),
-        parse_mode="HTML"
-    )
+    try:
+        await callback.message.edit_text(
+            "<b>Asosiy menyu:</b>",
+            reply_markup=main_menu_keyboard(),
+            parse_mode="HTML"
+        )
+    except Exception:
+        try:
+            await callback.message.delete()
+        except Exception:
+            pass
+        await callback.message.answer(
+            "<b>Asosiy menyu:</b>",
+            reply_markup=main_menu_keyboard(),
+            parse_mode="HTML"
+        )
 
 # ============================================================
 # MAIN
