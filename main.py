@@ -79,22 +79,23 @@ ZODIAC_SIGNS = {
     "baliq": ("Baliq", "♓"),
 }
 
+# TO'G'RILANGAN BURJLAR MOSLIGI (duplikatlar olib tashlandi)
 ZODIAC_COMPATIBILITY = {
     "qoy": {
         "mos": ["arslon", "sunbula", "qoy", "tarozi", "qovga", "egizak", "oqotar"],
         "qiyin": ["qisqichbaqa", "chayon", "baliq"]
     },
     "buzoq": {
-        "mos": ["buzoq", "qisqichbaqa", "tog_echkisi", "baliq", "chayon"],
+        "mos": ["qisqichbaqa", "baliq"],
         "qiyin": ["egizak", "oqotar", "qovga", "buzoq", "chayon", "tog_echkisi"]
     },
     "egizak": {
-        "mos": ["qoy", "egizak", "oqotar", "buzoq", "chayon", "baliq"],
-        "qiyin": ["qisqichbaqa", "chayon", "baliq", "egizak", "qo'y", "arslon"]
+        "mos": ["qoy", "oqotar", "buzoq"],
+        "qiyin": ["qisqichbaqa", "arslon", "chayon", "baliq"]
     },
     "qisqichbaqa": {
-        "mos": ["buzoq", "tog_echkisi", "baliq", "chayon", "qisqichbaqa"],
-        "qiyin": ["qoy", "egizak", "oqotar", "chayon", "qisqichbaqa", "tarozi"]
+        "mos": ["buzoq", "tog_echkisi", "baliq"],
+        "qiyin": ["qoy", "egizak", "oqotar", "tarozi", "chayon", "qisqichbaqa"]
     },
     "arslon": {
         "mos": ["qoy", "egizak", "tarozi", "arslon", "oqotar", "qovga"],
@@ -109,7 +110,7 @@ ZODIAC_COMPATIBILITY = {
         "qiyin": ["buzoq", "qisqichbaqa", "tog_echkisi", "chayon", "baliq"]
     },
     "chayon": {
-        "mos": ["buzoq", "qisqichbaqa", "tog_echkisi", "chayon", "baliq"],
+        "mos": ["buzoq", "qisqichbaqa", "tog_echkisi", "baliq"],
         "qiyin": ["qoy", "egizak", "oqotar", "arslon", "tarozi", "qovga"]
     },
     "oqotar": {
@@ -218,7 +219,6 @@ async def init_db():
                 channel_name TEXT
             )
         """)
-        # Counter for announcement numbers
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS announcement_counter (
                 id SERIAL PRIMARY KEY,
@@ -314,12 +314,16 @@ def get_zodiac_display(zodiac_key: str) -> str:
     name, symbol = ZODIAC_SIGNS.get(zodiac_key, (zodiac_key, ""))
     return f"{name} {symbol}"
 
+def get_zodiac_lowercase(zodiac_key: str) -> str:
+    name, _ = ZODIAC_SIGNS.get(zodiac_key, (zodiac_key, ""))
+    return name.lower()
+
 def get_compatibility_text(zodiac_key: str) -> tuple:
     data = ZODIAC_COMPATIBILITY.get(zodiac_key, {})
     mos_list = data.get("mos", [])[:3]
     qiyin_list = data.get("qiyin", [])
-    mos_text = ", ".join([get_zodiac_display(z) for z in mos_list]) if mos_list else "Mavjud emas"
-    qiyin_text = ", ".join([get_zodiac_display(z) for z in qiyin_list]) if qiyin_list else "Mavjud emas"
+    mos_text = ", ".join([get_zodiac_lowercase(z) for z in mos_list]) if mos_list else "Mavjud emas"
+    qiyin_text = ", ".join([get_zodiac_lowercase(z) for z in qiyin_list]) if qiyin_list else "Mavjud emas"
     return mos_text, qiyin_text
 
 def format_announcement(data: dict, ann_number: int = None, channel_key: str = "ch1") -> str:
@@ -332,10 +336,7 @@ def format_announcement(data: dict, ann_number: int = None, channel_key: str = "
         else:
             header = f"E'LON{num_str} | KUYOV NOMZODI:"
     else:
-        if "2" in ann_type:
-            header = f"E'LON{num_str} | KELIN NOMZODI 2-RO'ZG'ORGA:"
-        else:
-            header = f"E'LON{num_str} | KELIN NOMZODI:"
+        header = f"E'LON{num_str} | KELIN NOMZODI:"
 
     zodiac = data.get("zodiac", "")
     mos, qiyin = get_compatibility_text(zodiac)
@@ -343,7 +344,8 @@ def format_announcement(data: dict, ann_number: int = None, channel_key: str = "
     ch_info = CHANNELS.get(channel_key, CHANNELS["ch1"])
     ch_name = ch_info.get("name", "@sovchirr")
 
-    text = f"<b>{header}</b>\n\n"
+    text = f"<b>{header}</b>\n"
+    text += "<i>"
     text += f"<b>Ismi:</b> {data.get('name_age', '---')}\n"
     text += f"<b>Millati:</b> {data.get('nationality', '---')}\n"
     text += f"<b>Bo'yi va vazni:</b> {data.get('height_weight', '---')}\n"
@@ -357,15 +359,19 @@ def format_announcement(data: dict, ann_number: int = None, channel_key: str = "
     text += f"<b>Burji:</b> {get_zodiac_display(zodiac)}\n"
     text += f"<b>Eng mos burjlar:</b> {mos}\n"
     text += f"<b>Qiyin moslashadigan burjlar:</b> {qiyin}\n"
-    text += f"<b>Fe'l-atvori:</b> {data.get('behavior', '---')}\n\n"
-    text += "<b>💍 JUFTIDA IZLAYOTGAN SIFATLAR:</b>\n\n"
+    text += f"<b>Fe'l-atvori:</b> {data.get('behavior', '---')}\n"
+    text += "</i>\n"
+    text += "<b>💍 JUFTIDA IZLAYOTGAN SIFATLAR:</b>\n"
+    text += "<i>"
     text += f"<b>Yosh shegarasi:</b> {data.get('partner_age', '---')}\n"
     text += f"<b>Millati:</b> {data.get('partner_nationality', '---')}\n"
-    text += f"<b>Qomati:</b> {data.get('partner_body', '---')}\n"
+    text += f"<b>Ko'rinishi:</b> {data.get('partner_body', '---')}\n"
     text += f"<b>Ma'lumoti:</b> {data.get('partner_education', '---')}\n"
-    text += f"<b>Yashash joyi:</b> {data.get('partner_residence', '---')}\n"
-    text += f"<b>Boshqa talablar:</b> {data.get('partner_other', '---')}\n\n"
-    text += f"<b>Aloqa uchun:</b> {data.get('contact', '---')}\n\n"
+    text += f"<b>Qaysi hududdan qidiryapsiz:</b> {data.get('partner_residence', '---')}\n"
+    text += f"<b>Talablaringiz:</b> {data.get('partner_other', '---')}\n"
+    text += f"<b>Nomzod bilan bog'lanish:</b> {data.get('contact', '---')}\n"
+    text += "</i>\n\n"
+    text += f"<b>Anketa to'ldirish: @AnketaYozing_bot</b>\n"
     text += f"<b>KANALGA OBUNA BO'LISH</b> {ch_name}"
     return text
 
@@ -386,7 +392,6 @@ def announcement_type_keyboard():
         [InlineKeyboardButton(text="🤵 Kuyov nomzodi", callback_data="type_kuyov")],
         [InlineKeyboardButton(text="👰 Kelin nomzodi", callback_data="type_kelin")],
         [InlineKeyboardButton(text="🤵 Kuyov nomzodi (2-ro'zg'or)", callback_data="type_kuyov2")],
-        [InlineKeyboardButton(text="👰 Kelin nomzodi (2-ro'zg'or)", callback_data="type_kelin2")],
         [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="cancel")]
     ])
 
@@ -462,6 +467,28 @@ def cancel_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="cancel")]
     ])
+
+def skip_keyboard(prefix: str):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⏭ O'tkazib yuborish", callback_data=f"{prefix}_skip")],
+        [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="cancel")]
+    ])
+
+def channel_selection_keyboard(selected=None):
+    if selected is None:
+        selected = []
+    buttons = []
+    for ch_key, ch_info in CHANNELS.items():
+        ch_name = ch_info.get("name", "")
+        if not ch_name:
+            continue
+        mark = "✅" if ch_key in selected else "☑️"
+        buttons.append([InlineKeyboardButton(text=f"{mark} {ch_name}", callback_data=f"chsel_{ch_key}")])
+    buttons.append([
+        InlineKeyboardButton(text="🚀 Yuborish", callback_data="chsel_confirm"),
+        InlineKeyboardButton(text="❌ Bekor qilish", callback_data="cancel")
+    ])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 # ============================================================
 # HANDLERS
@@ -579,16 +606,7 @@ async def process_type(callback: CallbackQuery, state: FSMContext, bot: Bot):
         await state.set_state(AnnouncementState.name_age)
         await callback.message.edit_text(
             "<b>1/17</b> - Ismingiz va yoshingizni kiriting.\n"
-            "<i>Masalan: Muzaffar, 28 yosh</i>",
-            reply_markup=cancel_keyboard(),
-            parse_mode="HTML"
-        )
-    elif ann_type == "kelin2":
-        await state.update_data(photo_file_id=KELIN2_IMAGE)
-        await state.set_state(AnnouncementState.name_age)
-        await callback.message.edit_text(
-            "<b>1/17</b> - Ismingiz va yoshingizni kiriting.\n"
-            "<i>Masalan: Dilnoza, 28 yosh</i>",
+            "<i>Masalan: Umid(a), 28 yosh</i>",
             reply_markup=cancel_keyboard(),
             parse_mode="HTML"
         )
@@ -628,7 +646,7 @@ async def process_photo_selection(callback: CallbackQuery, state: FSMContext, bo
     await bot.send_message(
         callback.from_user.id,
         "<b>1/17</b> - Ismingiz va yoshingizni kiriting.\n"
-        "<i>Masalan: Muzaffar, 28 yosh</i>",
+        "<i>Masalan: Umid(a), 28 yosh</i>",
         reply_markup=cancel_keyboard(),
         parse_mode="HTML"
     )
@@ -659,7 +677,8 @@ async def process_name_age(message: Message, state: FSMContext):
     await state.update_data(name_age=message.text)
     await state.set_state(AnnouncementState.nationality)
     await message.answer(
-        "<b>2/17</b> - Millatingizni kiriting:",
+        "<b>2/17</b> - Millatingizni kiriting:\n"
+        "<i>Masalan: o'zbek...</i>",
         reply_markup=cancel_keyboard(),
         parse_mode="HTML"
     )
@@ -670,7 +689,7 @@ async def process_nationality(message: Message, state: FSMContext):
     await state.set_state(AnnouncementState.height_weight)
     await message.answer(
         "<b>3/17</b> - Bo'yingiz va vazningizni kiriting.\n"
-        "<i>Masalan: 185 sm/90 kg</i>",
+        "<i>Masalan: 175 sm/70 kg</i>",
         reply_markup=cancel_keyboard(),
         parse_mode="HTML"
     )
@@ -702,7 +721,19 @@ async def process_marital(callback: CallbackQuery, state: FSMContext):
     await state.update_data(marital_status=MARITAL_STATUS_OPTIONS[idx])
     await state.set_state(AnnouncementState.children)
     await callback.message.edit_text(
-        "<b>6/17</b> - Farzandlaringiz haqida ma'lumot kiriting:",
+        "<b>6/17</b> - Farzandlaringiz haqida ma'lumot kiriting:\n"
+        "<i>Masalan: bor, yo'q, bir o'g'il, bir qiz,..</i>",
+        reply_markup=skip_keyboard("children"),
+        parse_mode="HTML"
+    )
+
+@router.callback_query(AnnouncementState.children, F.data == "children_skip")
+async def skip_children(callback: CallbackQuery, state: FSMContext):
+    await state.update_data(children="Yo'q")
+    await state.set_state(AnnouncementState.residence)
+    await callback.message.edit_text(
+        "<b>7/17</b> - Yashash joyingizni kiriting:\n"
+        "<i>Masalan: ... viloyati ... tumani/shahri</i>",
         reply_markup=cancel_keyboard(),
         parse_mode="HTML"
     )
@@ -712,7 +743,8 @@ async def process_children(message: Message, state: FSMContext):
     await state.update_data(children=message.text)
     await state.set_state(AnnouncementState.residence)
     await message.answer(
-        "<b>7/17</b> - Yashash joyingizni kiriting:",
+        "<b>7/17</b> - Yashash joyingizni kiriting:\n"
+        "<i>Masalan: ... viloyati ... tumani/shahri</i>",
         reply_markup=cancel_keyboard(),
         parse_mode="HTML"
     )
@@ -763,7 +795,8 @@ async def process_zodiac(callback: CallbackQuery, state: FSMContext):
     await state.update_data(zodiac=zodiac)
     await state.set_state(AnnouncementState.behavior)
     await callback.message.edit_text(
-        "<b>11/17</b> - Fe'l-atvoringizni qisqacha yozing:",
+        "<b>11/17</b> - Fe'l-atvoringizni qisqacha yozing:\n"
+        "<i>Masalan: jiddiy, kamgap,...</i>",
         reply_markup=cancel_keyboard(),
         parse_mode="HTML"
     )
@@ -773,7 +806,8 @@ async def process_behavior(message: Message, state: FSMContext):
     await state.update_data(behavior=message.text)
     await state.set_state(AnnouncementState.partner_age)
     await message.answer(
-        "<b>12/17</b> - Juftingiz uchun yosh chegarasini kiriting:",
+        "<b>12/17</b> - Juftingiz uchun yosh chegarasini kiriting:\n"
+        "<i>Masalan: 18-25 yosh, taqdir,...</i>",
         reply_markup=cancel_keyboard(),
         parse_mode="HTML"
     )
@@ -783,7 +817,8 @@ async def process_partner_age(message: Message, state: FSMContext):
     await state.update_data(partner_age=message.text)
     await state.set_state(AnnouncementState.partner_nationality)
     await message.answer(
-        "<b>13/17</b> - Juftingiz millatini kiriting:",
+        "<b>13/17</b> - Juftingiz millatini kiriting:\n"
+        "<i>Masalan: o'zbek, muhim emas, taqdir,...</i>",
         reply_markup=cancel_keyboard(),
         parse_mode="HTML"
     )
@@ -793,7 +828,8 @@ async def process_partner_nationality(message: Message, state: FSMContext):
     await state.update_data(partner_nationality=message.text)
     await state.set_state(AnnouncementState.partner_body)
     await message.answer(
-        "<b>14/17</b> - Juftingiz qomatini kiriting:",
+        "<b>14/17</b> - Juftingiz ko'rinishini kiriting:\n"
+        "<i>Masalan: taqdir, kelishgan, bo'yi...</i>",
         reply_markup=cancel_keyboard(),
         parse_mode="HTML"
     )
@@ -803,7 +839,8 @@ async def process_partner_body(message: Message, state: FSMContext):
     await state.update_data(partner_body=message.text)
     await state.set_state(AnnouncementState.partner_education)
     await message.answer(
-        "<b>15/17</b> - Juftingiz ma'lumoti:",
+        "<b>15/17</b> - Juftingiz ma'lumoti:\n"
+        "<i>Masalan: oliy, o'qimishli, muhim emas,...</i>",
         reply_markup=cancel_keyboard(),
         parse_mode="HTML"
     )
@@ -813,7 +850,8 @@ async def process_partner_education(message: Message, state: FSMContext):
     await state.update_data(partner_education=message.text)
     await state.set_state(AnnouncementState.partner_residence)
     await message.answer(
-        "<b>16/17</b> - Juftingiz yashash joyi:",
+        "<b>16/17</b> - Juftingizni qaysi hududdan qidiryapsiz:\n"
+        "<i>Masalan: Toshkent shahri, ...</i>",
         reply_markup=cancel_keyboard(),
         parse_mode="HTML"
     )
@@ -823,7 +861,8 @@ async def process_partner_residence(message: Message, state: FSMContext):
     await state.update_data(partner_residence=message.text)
     await state.set_state(AnnouncementState.partner_other)
     await message.answer(
-        "<b>17/17</b> - Boshqa talablaringiz (200 belgidan oshmasin):",
+        "<b>17/17</b> - Juftingizga talablaringiz (200 belgidan oshmasin):\n"
+        "<i>Masalan: diniy, xarakteri yaxshi,..</i>",
         reply_markup=cancel_keyboard(),
         parse_mode="HTML"
     )
@@ -832,7 +871,7 @@ async def process_partner_residence(message: Message, state: FSMContext):
 async def process_partner_other(message: Message, state: FSMContext):
     if len(message.text) > 200:
         await message.answer(
-            "<b>❌ 200 belgidan oshmasligi kerak!</b> Qayta kiriting:",
+            "<b>❌ 200 belgidan ko'p! Talablaringizni qisqartiring:</b>",
             reply_markup=cancel_keyboard(),
             parse_mode="HTML"
         )
@@ -840,7 +879,8 @@ async def process_partner_other(message: Message, state: FSMContext):
     await state.update_data(partner_other=message.text)
     await state.set_state(AnnouncementState.contact)
     await message.answer(
-        "Aloqa uchun Telegram username yoki telefon raqam:",
+        "<b>Nomzod bilan bog'lanish:</b>\n"
+        "<i>Masalan: @sovchirr, +99877...</i>",
         reply_markup=cancel_keyboard(),
         parse_mode="HTML"
     )
@@ -870,8 +910,23 @@ async def process_contact(message: Message, state: FSMContext):
     )
 
 @router.callback_query(AnnouncementState.preview, F.data == "confirm_yes")
-async def confirm_announcement(callback: CallbackQuery, state: FSMContext, bot: Bot):
+async def confirm_announcement(callback: CallbackQuery, state: FSMContext):
+    await state.set_state(AnnouncementState.channel_selection)
+    await state.update_data(selected_channels=[])
+    await callback.message.edit_text(
+        "<b>Qaysi kanallarga yuborishni tanlang:</b>",
+        reply_markup=channel_selection_keyboard([]),
+        parse_mode="HTML"
+    )
+
+@router.callback_query(AnnouncementState.channel_selection, F.data == "chsel_confirm")
+async def process_channel_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot):
     data = await state.get_data()
+    selected = data.get("selected_channels", [])
+    if not selected:
+        await callback.answer("Kamida bitta kanal tanlang!", show_alert=True)
+        return
+
     ann_id = data.get("ann_id")
     ann_data = await get_announcement(ann_id)
 
@@ -882,7 +937,8 @@ async def confirm_announcement(callback: CallbackQuery, state: FSMContext, bot: 
     success_channels = []
     failed_channels = []
 
-    for ch_key, ch_info in CHANNELS.items():
+    for ch_key in selected:
+        ch_info = CHANNELS.get(ch_key, {})
         ch_id = ch_info.get("id", "")
         ch_name = ch_info.get("name", "")
 
@@ -905,7 +961,7 @@ async def confirm_announcement(callback: CallbackQuery, state: FSMContext, bot: 
             success_channels.append(ch_name)
 
             # Save first channel info to DB
-            if not success_channels[:-1]:
+            if len(success_channels) == 1:
                 await update_announcement_status(ann_id, "approved", msg.message_id, ch_id, ch_name)
 
         except Exception as e:
@@ -933,6 +989,19 @@ async def confirm_announcement(callback: CallbackQuery, state: FSMContext, bot: 
             parse_mode="HTML"
         )
 
+@router.callback_query(AnnouncementState.channel_selection, F.data.startswith("chsel_"))
+async def toggle_channel_selection(callback: CallbackQuery, state: FSMContext):
+    ch_key = callback.data.replace("chsel_", "")
+    data = await state.get_data()
+    selected = list(data.get("selected_channels", []))
+    if ch_key in selected:
+        selected.remove(ch_key)
+    else:
+        selected.append(ch_key)
+    await state.update_data(selected_channels=selected)
+    await callback.message.edit_reply_markup(reply_markup=channel_selection_keyboard(selected))
+    await callback.answer()
+
 @router.callback_query(AnnouncementState.preview, F.data == "confirm_restart")
 async def restart_announcement(callback: CallbackQuery, state: FSMContext):
     await state.clear()
@@ -959,20 +1028,53 @@ async def my_announcements(callback: CallbackQuery):
         return
 
     text = "<b>📋 Sizning e'lonlaringiz:</b>\n\n"
+    kb = []
     for ann in anns:
         status = ann.get("status", "pending")
-        status_text = {"pending": "⏳ Kutilmoqda", "approved": "✅ Yuborilgan"}.get(status, status)
+        status_text = {"pending": "⏳ Kutilmoqda", "approved": "✅ Yuborilgan", "deleted": "🗑 O'chirilgan"}.get(status, status)
         ch_name = ann.get("channel_name", "")
         ch_str = f" ({ch_name})" if ch_name else ""
         text += f"🆔 #{ann['id']}{ch_str} - {status_text}\n"
-
-        # Show full announcement details
         text += f"👤 {ann.get('name_age', '---')}\n"
         text += f"📍 {ann.get('residence', '---')}\n"
         text += f"📞 {ann.get('contact', '---')}\n"
         text += "────────────\n"
 
-    await callback.message.edit_text(text, reply_markup=main_menu_keyboard(), parse_mode="HTML")
+        if status == "approved" and ann.get("message_id") and ann.get("channel_id"):
+            kb.append([InlineKeyboardButton(text=f"🗑 #{ann['id']} ni o'chirish", callback_data=f"delann_{ann['id']}")])
+
+    kb.append([InlineKeyboardButton(text="🔙 Asosiy menyu", callback_data="back_main")])
+    await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=kb), parse_mode="HTML")
+
+@router.callback_query(F.data == "back_main")
+async def back_to_main(callback: CallbackQuery):
+    await callback.message.edit_text(
+        "<b>Asosiy menyu:</b>",
+        reply_markup=main_menu_keyboard(),
+        parse_mode="HTML"
+    )
+
+@router.callback_query(F.data.startswith("delann_"))
+async def delete_announcement(callback: CallbackQuery, bot: Bot):
+    ann_id = int(callback.data.replace("delann_", ""))
+    ann = await get_announcement(ann_id)
+    if not ann or ann.get("user_id") != callback.from_user.id:
+        await callback.answer("Bu e'lon sizga tegishli emas!", show_alert=True)
+        return
+
+    if ann.get("status") != "approved":
+        await callback.answer("Bu e'lon allaqachon o'chirilgan!", show_alert=True)
+        return
+
+    try:
+        if ann.get("message_id") and ann.get("channel_id"):
+            await bot.delete_message(ann["channel_id"], ann["message_id"])
+    except Exception:
+        pass
+
+    await update_announcement_status(ann_id, "deleted")
+    await callback.answer("E'lon kanaldan o'chirildi!")
+    await my_announcements(callback)
 
 # ============================================================
 # MAIN
