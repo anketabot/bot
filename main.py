@@ -1037,8 +1037,77 @@ async def cancel_process(callback: CallbackQuery, state: FSMContext):
         parse_mode="HTML"
     )
 
+
+# ============================================================
+# MENING E'LONLARIM - YANGI TUZILISH
+# ============================================================
+async def _show_single_announcement(callback_or_message, bot: Bot, ann: dict, from_list: bool = True):
+    """Bitta e'lonni to'liq ko'rsatish (rasm + matn + o'chirish tugmasi)"""
+    status = ann.get("status", "pending")
+    status_text = {"pending": "⏳ Kutilmoqda", "approved": "✅ Yuborilgan", "deleted": "🗑 O'chirilgan"}.get(status, status)
+
+    ann_number = ann.get("id")
+
+    # Kanal kalitini topish
+    channel_key = "ch1"
+    for ch_key, ch_info in CHANNELS.items():
+        if ch_info.get("name") == ann.get("channel_name"):
+            channel_key = ch_key
+            break
+
+    text = format_announcement(ann, ann_number, channel_key)
+    text = f"<b>📋 E'lon #{ann['id']}</b>\n<b>Status:</b> {status_text}\n\n{text}"
+
+    photo_file_id = ann.get("photo_file_id", "")
+
+    # Klaviatura
+    kb = []
+    if status == "approved" and ann.get("message_id") and ann.get("channel_id"):
+        kb.append([InlineKeyboardButton(text="🗑 E'lonni o'chirish", callback_data=f"delann_{ann['id']}")])
+
+    if from_list:
+        kb.append([InlineKeyboardButton(text="🔙 Orqaga", callback_data="my_announcements")])
+    else:
+        kb.append([InlineKeyboardButton(text="🔙 Asosiy menyu", callback_data="back_main")])
+
+    markup = InlineKeyboardMarkup(inline_keyboard=kb)
+
+    # Agar rasm bo'lsa - rasm bilan yuborish
+    if is_valid_file_id(photo_file_id):
+        try:
+            if hasattr(callback_or_message, 'message'):
+                # CallbackQuery
+                await callback_or_message.message.delete()
+                await bot.send_photo(
+                    chat_id=callback_or_message.from_user.id,
+                    photo=photo_file_id,
+                    caption=text,
+                    reply_markup=markup,
+                    parse_mode="HTML"
+                )
+            else:
+                # Message
+                await callback_or_message.delete()
+                await bot.send_photo(
+                    chat_id=callback_or_message.chat.id,
+                    photo=photo_file_id,
+                    caption=text,
+                    reply_markup=markup,
+                    parse_mode="HTML"
+                )
+            return
+        except Exception:
+            pass
+
+    # Rasm yo'q yoki xatolik bo'lsa - matn bilan
+    if hasattr(callback_or_message, 'message'):
+        await callback_or_message.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
+    else:
+        await callback_or_message.edit_text(text, reply_markup=markup, parse_mode="HTML")
+
+
 @router.callback_query(F.data == "my_announcements")
-async def my_announcements(callback: CallbackQuery):
+async def my_announcements(callback: CallbackQuery, bot: Bot):
     anns = await get_user_announcements(callback.from_user.id)
     if not anns:
         await callback.message.edit_text(
@@ -1048,32 +1117,39 @@ async def my_announcements(callback: CallbackQuery):
         )
         return
 
-    text = "<b>📋 Sizning e'lonlaringiz:</b>\n\n"
+    # Agar faqat 1 ta e'lon bo'lsa - to'liq ko'rsatish
+    if len(anns) == 1:
+        ann = anns[0]
+        await _show_single_announcement(callback, bot, ann, from_list=False)
+        return
+
+    # Agar 2+ ta bo'lsa - ro'yxat ko'rsatish
+    text = "<b>📋 Sizning e'lonlaringiz:</b>\n\nBatafsil ko'rish uchun tanlang:"
     kb = []
     for ann in anns:
         status = ann.get("status", "pending")
-        status_text = {"pending": "⏳ Kutilmoqda", "approved": "✅ Yuborilgan", "deleted": "🗑 O'chirilgan"}.get(status, status)
-        ch_name = ann.get("channel_name", "")
-        ch_str = f" ({ch_name})" if ch_name else ""
-        text += f"🆔 #{ann['id']}{ch_str} - {status_text}\n"
-        text += f"👤 {ann.get('name_age', '---')}\n"
-        text += f"📍 {ann.get('residence', '---')}\n"
-        text += f"📞 {ann.get('contact', '---')}\n"
-        text += "────────────\n"
-
-        if status == "approved" and ann.get("message_id") and ann.get("channel_id"):
-            kb.append([InlineKeyboardButton(text=f"🗑 #{ann['id']} ni o'chirish", callback_data=f"delann_{ann['id']}")])
+        status_emoji = {"pending": "⏳", "approved": "✅", "deleted": "🗑"}.get(status, "⏳")
+        name = ann.get('name_age', '---')
+        kb.append([InlineKeyboardButton(
+            text=f"{status_emoji} E'lon #{ann['id']} - {name}",
+            callback_data=f"view_ann_{ann['id']}"
+        )])
 
     kb.append([InlineKeyboardButton(text="🔙 Asosiy menyu", callback_data="back_main")])
     await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=kb), parse_mode="HTML")
 
-@router.callback_query(F.data == "back_main")
-async def back_to_main(callback: CallbackQuery):
-    await callback.message.edit_text(
-        "<b>Asosiy menyu:</b>",
-        reply_markup=main_menu_keyboard(),
-        parse_mode="HTML"
-    )
+
+@router.callback_query(F.data.startswith("view_ann_"))
+async def view_announcement(callback: CallbackQuery, bot: Bot):
+    ann_id = int(callback.data.replace("view_ann_", ""))
+    ann = await get_announcement(ann_id)
+
+    if not ann or ann.get("user_id") != callback.from_user.id:
+        await callback.answer("Bu e'lon topilmadi!", show_alert=True)
+        return
+
+    await _show_single_announcement(callback, bot, ann, from_list=True)
+
 
 @router.callback_query(F.data.startswith("delann_"))
 async def delete_announcement(callback: CallbackQuery, bot: Bot):
@@ -1095,7 +1171,18 @@ async def delete_announcement(callback: CallbackQuery, bot: Bot):
 
     await update_announcement_status(ann_id, "deleted")
     await callback.answer("E'lon kanaldan o'chirildi!")
-    await my_announcements(callback)
+
+    # O'chirgandan keyin ro'yxatga qaytish
+    await my_announcements(callback, bot)
+
+
+@router.callback_query(F.data == "back_main")
+async def back_to_main(callback: CallbackQuery):
+    await callback.message.edit_text(
+        "<b>Asosiy menyu:</b>",
+        reply_markup=main_menu_keyboard(),
+        parse_mode="HTML"
+    )
 
 # ============================================================
 # MAIN
