@@ -62,7 +62,6 @@ KELIN_IMAGES = {
     "kelin_3": os.getenv("KELIN_IMG3", ""),
 }
 KUYOV2_IMAGE = os.getenv("KUYOV2_IMG", "")
-KELIN2_IMAGE = os.getenv("KELIN2_IMG", "")
 
 ZODIAC_SIGNS = {
     "qoy": ("Qo'y", "♈"),
@@ -136,9 +135,14 @@ EDUCATION_OPTIONS = [
     "Talaba", "O'quvchi", "Magistrant", "Yo'q"
 ]
 
-MARITAL_STATUS_OPTIONS = [
-    "bo'ydoq", "turmushga chiqmagan", "oilali", "qonuniy ajrashgan",
-    "ajrimda", "beva", "boshqa..."
+# KUYOV (ERKAK) UCHUN TURMUSH HOLATLARI
+MARITAL_STATUS_MALE = [
+    "bo'ydoq", "oilali", "ajrimda", "boshqa..."
+]
+
+# KELIN (AYOL) UCHUN TURMUSH HOLATLARI
+MARITAL_STATUS_FEMALE = [
+    "turmushga chiqmagan", "qonuniy ajrashgan", "beva", "boshqa..."
 ]
 
 # ============================================================
@@ -219,6 +223,13 @@ async def init_db():
                 channel_name TEXT
             )
         """)
+        # YANGI USTUNLARNI QO'SHISH (agar yo'q bo'lsa)
+        await conn.execute("""
+            ALTER TABLE announcements 
+            ADD COLUMN IF NOT EXISTS channel_id TEXT,
+            ADD COLUMN IF NOT EXISTS channel_name TEXT
+        """)
+        # Counter for announcement numbers
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS announcement_counter (
                 id SERIAL PRIMARY KEY,
@@ -294,7 +305,7 @@ async def get_user_announcements(user_id: int):
 async def update_announcement_status(ann_id: int, status: str, message_id: int = None, channel_id: str = None, channel_name: str = None):
     conn = await get_db()
     try:
-        if message_id and channel_id:
+        if message_id is not None and channel_id:
             await conn.execute(
                 "UPDATE announcements SET status = $1, posted_at = NOW(), message_id = $2, channel_id = $3, channel_name = $4 WHERE id = $5",
                 status, message_id, channel_id, channel_name, ann_id
@@ -363,7 +374,7 @@ def format_announcement(data: dict, ann_number: int = None, channel_key: str = "
     text += "</i>\n"
     text += "<b>💍 JUFTIDA IZLAYOTGAN SIFATLAR:</b>\n"
     text += "<i>"
-    text += f"<b>Yosh chegarasi:</b> {data.get('partner_age', '---')}\n"
+    text += f"<b>Yosh shegarasi:</b> {data.get('partner_age', '---')}\n"
     text += f"<b>Millati:</b> {data.get('partner_nationality', '---')}\n"
     text += f"<b>Ko'rinishi:</b> {data.get('partner_body', '---')}\n"
     text += f"<b>Ma'lumoti:</b> {data.get('partner_education', '---')}\n"
@@ -423,11 +434,12 @@ def education_keyboard():
     buttons.append([InlineKeyboardButton(text="❌ Bekor qilish", callback_data="cancel")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-def marital_status_keyboard():
+def marital_status_keyboard(gender: str = "male"):
+    options = MARITAL_STATUS_MALE if gender == "male" else MARITAL_STATUS_FEMALE
     buttons = []
     row = []
-    for i, status in enumerate(MARITAL_STATUS_OPTIONS):
-        row.append(InlineKeyboardButton(text=status, callback_data=f"marital_{i}"))
+    for i, status in enumerate(options):
+        row.append(InlineKeyboardButton(text=status, callback_data=f"marital_{i}_{gender}"))
         if len(row) == 2:
             buttons.append(row)
             row = []
@@ -708,17 +720,26 @@ async def process_height_weight(message: Message, state: FSMContext):
 async def process_education(callback: CallbackQuery, state: FSMContext):
     idx = int(callback.data.replace("edu_", ""))
     await state.update_data(education=EDUCATION_OPTIONS[idx])
+
+    data = await state.get_data()
+    ann_type = data.get("announcement_type", "")
+    gender = "female" if "kelin" in ann_type else "male"
+
     await state.set_state(AnnouncementState.marital_status)
     await callback.message.edit_text(
         "<b>5/17</b> - Turmush holatingizni tanlang:",
-        reply_markup=marital_status_keyboard(),
+        reply_markup=marital_status_keyboard(gender),
         parse_mode="HTML"
     )
 
 @router.callback_query(AnnouncementState.marital_status, F.data.startswith("marital_"))
 async def process_marital(callback: CallbackQuery, state: FSMContext):
-    idx = int(callback.data.replace("marital_", ""))
-    await state.update_data(marital_status=MARITAL_STATUS_OPTIONS[idx])
+    parts = callback.data.split("_")
+    idx = int(parts[1])
+    gender = parts[2] if len(parts) > 2 else "male"
+    options = MARITAL_STATUS_MALE if gender == "male" else MARITAL_STATUS_FEMALE
+
+    await state.update_data(marital_status=options[idx])
     await state.set_state(AnnouncementState.children)
     await callback.message.edit_text(
         "<b>6/17</b> - Farzandlaringiz haqida ma'lumot kiriting:\n"
