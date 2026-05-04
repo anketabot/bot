@@ -24,24 +24,34 @@ DATABASE_URL = os.getenv("DATABASE_URL", "")
 # 4 ta kanal
 CHANNELS = {
     "ch1": {
-        "id": os.getenv("CH1_ID", "@sovchirr"),
+        "id": os.getenv("CH1_ID", "-1001565109833"),
         "link": os.getenv("CH1_LINK", "https://t.me/sovchirr"),
         "name": os.getenv("CH1_NAME", "@sovchirr"),
     },
     "ch2": {
-        "id": os.getenv("CH2_ID", ""),
-        "link": os.getenv("CH2_LINK", ""),
-        "name": os.getenv("CH2_NAME", ""),
+        "id": os.getenv("CH2_ID", "-1003453010820"),
+        "link": os.getenv("CH2_LINK", "https://t.me/toshkentsovchii"),
+        "name": os.getenv("CH2_NAME", "@toshkentsovchii"),
     },
     "ch3": {
-        "id": os.getenv("CH3_ID", ""),
-        "link": os.getenv("CH3_LINK", ""),
-        "name": os.getenv("CH3_NAME", ""),
+        "id": os.getenv("CH3_ID", "-1003477652750"),
+        "link": os.getenv("CH3_LINK", "https://t.me/samarqandsovchii"),
+        "name": os.getenv("CH3_NAME", "@samarqandsovchii"),
     },
     "ch4": {
-        "id": os.getenv("CH4_ID", ""),
-        "link": os.getenv("CH4_LINK", ""),
-        "name": os.getenv("CH4_NAME", ""),
+        "id": os.getenv("CH4_ID", "-1003377514527"),
+        "link": os.getenv("CH4_LINK", "https://t.me/vodiysovchii"),
+        "name": os.getenv("CH4_NAME", "@vodiysovchii"),
+    },
+    "ch5": {
+        "id": os.getenv("CH5_ID", "-1002795898679"),
+        "link": os.getenv("CH5_LINK", "https://t.me/buxorosovchi_navoiysovchi"),
+        "name": os.getenv("CH5_NAME", "@buxorosovchi_navoiysovchi"),
+    },
+    "ch6": {
+        "id": os.getenv("CH6_ID", "-1003959485389"),
+        "link": os.getenv("CH6_LINK", "https://t.me/sovchivoha"),
+        "name": os.getenv("CH6_NAME", "@sovchivoha"),
     },
 }
 
@@ -545,7 +555,7 @@ async def cmd_start(message: Message):
     text = (
         "<b>Assalomu alaykum!</b> 👋\n\n"
         "Sovchilar kanalining rasmiy botiga xush kelibsiz!\n\n"
-        "Bu bot orqali siz o'zingiz haqingizda e'lon berishingiz mumkin.\n\n"
+        "Bu bot orqali anketa to`ldirib, e'lon joylashingiz mumkin. Biz sizga BAXT tilaymiz!.\n\n"
         "E'lon berish uchun quyidagi tugmani bosing:"
     )
     await message.answer(text, reply_markup=main_menu_keyboard(), parse_mode="HTML")
