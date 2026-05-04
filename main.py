@@ -129,8 +129,8 @@ EDUCATION_OPTIONS = [
 ]
 
 MARITAL_STATUS_OPTIONS = [
-    "bo'ydoq", "oilali", "ajrimda", "turmushga chiqmagan",
-    "qonuniy ajrashgan", "beva", "boshqa..."
+    "bo'ydoq", "oilali", "ajrimda", "boshqa...",
+    "turmushga chiqmagan", "qonuniy ajrashgan", "beva"
 ]
 
 # ============================================================
@@ -462,9 +462,10 @@ def education_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def marital_status_keyboard():
+    options = MARITAL_STATUS_OPTIONS
     buttons = []
     row = []
-    for i, status in enumerate(MARITAL_STATUS_OPTIONS):
+    for i, status in enumerate(options):
         row.append(InlineKeyboardButton(text=status, callback_data=f"marital_{i}"))
         if len(row) == 2:
             buttons.append(row)
@@ -756,12 +757,9 @@ async def process_education(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(AnnouncementState.marital_status, F.data.startswith("marital_"))
 async def process_marital(callback: CallbackQuery, state: FSMContext):
-
-
-# YANGI (to'g'ri):
-    idx = int(callback.data.replace("marital_", ""))
-    await state.update_data(marital_status=MARITAL_STATUS_OPTIONS[idx])
-
+    parts = callback.data.split("_")
+    idx = int(parts[1])
+    options = MARITAL_STATUS_OPTIONS
 
     await state.update_data(marital_status=options[idx])
     await state.set_state(AnnouncementState.children)
