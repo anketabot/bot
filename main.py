@@ -74,58 +74,58 @@ ZODIAC_SIGNS = {
 
 ZODIAC_COMPATIBILITY = {
     "qoy": {
-        "mos": ["arslon", "sunbula", "qoy", "tarozi", "qovga", "egizak", "oqotar"],
+        "mos": ["arslon", "egizak", "oqotar"],
         "qiyin": ["qisqichbaqa", "chayon", "baliq"]
     },
     "buzoq": {
-        "mos": ["qisqichbaqa", "baliq"],
-        "qiyin": ["egizak", "oqotar", "qovga", "buzoq", "chayon", "tog_echkisi"]
+        "mos": ["sunbula", "tog_echkisi", "baliq"],
+        "qiyin": ["qisqichbaqa", "chayon", "baliq"]
     },
     "egizak": {
-        "mos": ["qoy", "oqotar", "buzoq"],
-        "qiyin": ["qisqichbaqa", "arslon", "chayon", "baliq"]
+        "mos": ["qoy", "tarozi", "qovga"],
+        "qiyin": ["buzoq", "chayon", "tog_echkisi"]
     },
     "qisqichbaqa": {
         "mos": ["buzoq", "tog_echkisi", "baliq"],
-        "qiyin": ["qoy", "egizak", "oqotar", "tarozi", "chayon", "qisqichbaqa"]
+        "qiyin": ["qoy", "egizak", "oqotar"]
     },
     "arslon": {
-        "mos": ["qoy", "egizak", "tarozi", "arslon", "oqotar", "qovga"],
-        "qiyin": ["tog_echkisi", "baliq", "buzoq", "qisqichbaqa", "chayon"]
+        "mos": ["qoy", "egizak", "tarozi"],
+        "qiyin": ["buzoq", "tog_echkisi", "baliq"]
     },
     "sunbula": {
-        "mos": ["qoy", "buzoq", "tog_echkisi", "sunbula", "qisqichbaqa", "baliq"],
-        "qiyin": ["egizak", "oqotar", "qovga", "arslon", "chayon"]
+        "mos": ["buzoq", "tog_echkisi", "baliq"],
+        "qiyin": ["qisqichbaqa", "chayon", "qovga"]
     },
     "tarozi": {
-        "mos": ["qoy", "egizak", "tarozi", "qovga", "oqotar", "arslon"],
-        "qiyin": ["buzoq", "qisqichbaqa", "tog_echkisi", "chayon", "baliq"]
+        "mos": ["qoy", "egizak", "qovga"],
+        "qiyin": ["chayon", "tog_echkisi", "baliq"]
     },
     "chayon": {
-        "mos": ["buzoq", "qisqichbaqa", "tog_echkisi", "baliq"],
-        "qiyin": ["qoy", "egizak", "oqotar", "arslon", "tarozi", "qovga"]
+        "mos": ["buzoq", "qisqichbaqa", "tog_echkisi"],
+        "qiyin": ["qoy", "arslon", "qovga"]
     },
     "oqotar": {
-        "mos": ["qoy", "egizak", "arslon", "tarozi", "oqotar", "qovga"],
-        "qiyin": ["buzoq", "qisqichbaqa", "tog_echkisi", "sunbula", "chayon"]
+        "mos": ["qoy", "egizak", "qovga"],
+        "qiyin": ["buzoq", "qisqichbaqa", "tog_echkisi"]
     },
     "tog_echkisi": {
-        "mos": ["buzoq", "sunbula", "qisqichbaqa", "tog_echkisi", "baliq"],
-        "qiyin": ["qoy", "egizak", "arslon", "tarozi", "oqotar", "qovga"]
+        "mos": ["buzoq", "sunbula", "qisqichbaqa"],
+        "qiyin": ["qoy", "arslon", "egizak"]
     },
     "qovga": {
-        "mos": ["qoy", "tarozi", "arslon", "oqotar", "qovga", "egizak"],
-        "qiyin": ["buzoq", "sunbula", "tog_echkisi", "chayon", "baliq"]
+        "mos": ["qoy", "egizak", "tarozi"],
+        "qiyin": ["buzoq", "chayon", "tog_echkisi"]
     },
     "baliq": {
-        "mos": ["buzoq", "qisqichbaqa", "chayon", "tog_echkisi", "baliq", "sunbula"],
-        "qiyin": ["qoy", "egizak", "arslon", "tarozi", "oqotar", "qovga"]
+        "mos": ["buzoq", "qisqichbaqa", "sunbula"],
+        "qiyin": ["qoy", "egizak", "qovga"]
     }
 }
 
 EDUCATION_OPTIONS = [
     "o'rta", "o'rta-maxsus", "oliy (bakalavr)", "oliy (magistr)",
-    "Talaba", "O'quvchi", "Magistrant", "Yo'q"
+    "Toʻliqsiz oliy", "O'quvchi", "Magistrant", "Yo'q"
 ]
 
 MARITAL_STATUS_MALE = [
@@ -388,7 +388,7 @@ def format_announcement(data: dict, ann_number: int = None, channel_key: str = "
 
     text = f"<b>{header}</b>\n"
     text += "<i>"
-    text += f"<b>Ismi:</b> {data.get('name_age', '---')}\n"
+    text += f"<b>Ismi va yoshi:</b> {data.get('name_age', '---')}\n"
     text += f"<b>Millati:</b> {data.get('nationality', '---')}\n"
     text += f"<b>Bo'yi va vazni:</b> {data.get('height_weight', '---')}\n"
     text += f"<b>Ma'lumoti:</b> {data.get('education', '---')}\n"
