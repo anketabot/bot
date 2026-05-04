@@ -374,11 +374,11 @@ def format_announcement(data: dict, ann_number: int = None, channel_key: str = "
 
     if "kuyov" in ann_type:
         if "2" in ann_type:
-            header = f"E'LON{num_str} | KUYOV NOMZODI 2-RO'ZG'ORGA:"
+            header = f"E'LON{num_str} KUYOV 2-RO'ZG'ORGA"
         else:
-            header = f"E'LON{num_str} | KUYOV NOMZODI:"
+            header = f"E'LON{num_str} KUYOV NOMZODI"
     else:
-        header = f"E'LON{num_str} | KELIN NOMZODI:"
+        header = f"E'LON{num_str} KELIN NOMZODI"
 
     zodiac = data.get("zodiac", "")
     mos, qiyin = get_compatibility_text(zodiac)
@@ -386,8 +386,8 @@ def format_announcement(data: dict, ann_number: int = None, channel_key: str = "
     ch_info = CHANNELS.get(channel_key, CHANNELS["ch1"])
     ch_name = ch_info.get("name", "@sovchirr")
 
-    text = f"<b>{header}</b>\n"
-    text += "<i>"
+    # BARCHA MATN QIYA (italic) ichida
+    text = f"<i><b>{header}</b>\n\n"
     text += f"<b>Ismi va yoshi:</b> {data.get('name_age', '---')}\n"
     text += f"<b>Millati:</b> {data.get('nationality', '---')}\n"
     text += f"<b>Bo'yi va vazni:</b> {data.get('height_weight', '---')}\n"
@@ -401,21 +401,19 @@ def format_announcement(data: dict, ann_number: int = None, channel_key: str = "
     text += f"<b>Burji:</b> {get_zodiac_display(zodiac)}\n"
     text += f"<b>Eng mos burjlar:</b> {mos}\n"
     text += f"<b>Qiyin moslashadigan burjlar:</b> {qiyin}\n"
-    text += f"<b>Fe'l-atvori:</b> {data.get('behavior', '---')}\n"
-    text += "</i>\n"
-    text += "<b>💍 JUFTIDA IZLAYOTGAN SIFATLAR:</b>\n"
-    text += "<i>"
+    text += f"<b>Fe'l-atvori:</b> {data.get('behavior', '---')}\n\n"
+    text += "<b>💍 JUFTIDA IZLAYOTGAN SIFATLAR:</b>\n\n"
     text += f"<b>Yosh chegarasi:</b> {data.get('partner_age', '---')}\n"
     text += f"<b>Millati:</b> {data.get('partner_nationality', '---')}\n"
     text += f"<b>Ko'rinishi:</b> {data.get('partner_body', '---')}\n"
     text += f"<b>Ma'lumoti:</b> {data.get('partner_education', '---')}\n"
     text += f"<b>Qaysi hududdan qidiryapsiz:</b> {data.get('partner_residence', '---')}\n"
     text += f"<b>Talablaringiz:</b> {data.get('partner_other', '---')}\n"
-    text += f"<b>Nomzod bilan bog'lanish:</b> {data.get('contact', '---')}\n"
-    text += "</i>\n\n"
+    text += f"<b>Aloqa uchun:</b> {data.get('contact', '---')}\n\n"
     text += f"<b>Anketa to'ldirish: @AnketaYozing_bot</b>\n"
-    text += f"<b>KANALGA OBUNA BO'LISH</b> {ch_name}"
+    text += f"<b>KANALGA OBUNA BO'LISH</b> {ch_name}</i>"
     return text
+    
 
 def is_valid_file_id(file_id: str) -> bool:
     return bool(file_id and file_id.strip() and not file_id.startswith("YOUR_FILE_ID"))
