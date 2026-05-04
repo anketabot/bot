@@ -407,7 +407,7 @@ def format_announcement(data: dict, ann_number: int = None, channel_key: str = "
     text += f"<b>Ma'lumoti:</b> {data.get('partner_education', '---')}\n"
     text += f"<b>Qaysi hududdan qidiryapsiz:</b> {data.get('partner_residence', '---')}\n"
     text += f"<b>Talablaringiz:</b> {data.get('partner_other', '---')}\n"
-    text += f"<b>Aloqa uchun:</b> {data.get('contact', '---')}\n"
+    text += f"<b>Nomzod bilan bogʻlanish:</b> {data.get('contact', '---')}\n"
     text += f"<b>Anketa to'ldirish: @AnketaYozing_bot</b>\n"
     text += f"<b>OBUNA BO'LISH</b> {ch_name}</i>"
     return text
