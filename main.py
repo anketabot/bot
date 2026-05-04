@@ -756,10 +756,12 @@ async def process_education(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(AnnouncementState.marital_status, F.data.startswith("marital_"))
 async def process_marital(callback: CallbackQuery, state: FSMContext):
-    parts = callback.data.split("_")
-    idx = int(parts[1])
-    gender = parts[2] if len(parts) > 2 else "male"
-    options = MARITAL_STATUS_MALE if gender == "male" else MARITAL_STATUS_FEMALE
+
+
+# YANGI (to'g'ri):
+    idx = int(callback.data.replace("marital_", ""))
+    await state.update_data(marital_status=MARITAL_STATUS_OPTIONS[idx])
+
 
     await state.update_data(marital_status=options[idx])
     await state.set_state(AnnouncementState.children)
