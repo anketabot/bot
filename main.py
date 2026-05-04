@@ -1,9 +1,3 @@
-#!/usr/bin/env python3
-"""
-@sovchirr - Telegram E'lon Bot
-PostgreSQL + 4 ta kanal + avtomatik e'lon raqami
-"""
-
 import os
 import asyncio
 import asyncpg
@@ -78,7 +72,6 @@ ZODIAC_SIGNS = {
     "baliq": ("Baliq", "♓"),
 }
 
-# TO'G'RILANGAN BURJLAR MOSLIGI (duplikatlar olib tashlandi)
 ZODIAC_COMPATIBILITY = {
     "qoy": {
         "mos": ["arslon", "sunbula", "qoy", "tarozi", "qovga", "egizak", "oqotar"],
@@ -135,12 +128,10 @@ EDUCATION_OPTIONS = [
     "Talaba", "O'quvchi", "Magistrant", "Yo'q"
 ]
 
-# KUYOV (ERKAK) UCHUN TURMUSH HOLATLARI
 MARITAL_STATUS_MALE = [
     "bo'ydoq", "oilali", "ajrimda", "boshqa..."
 ]
 
-# KELIN (AYOL) UCHUN TURMUSH HOLATLARI
 MARITAL_STATUS_FEMALE = [
     "turmushga chiqmagan", "qonuniy ajrashgan", "beva", "boshqa..."
 ]
@@ -223,13 +214,21 @@ async def init_db():
                 channel_name TEXT
             )
         """)
-        # YANGI USTUNLARNI QO'SHISH (agar yo'q bo'lsa)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS posted_channels (
+                id SERIAL PRIMARY KEY,
+                announcement_id INTEGER REFERENCES announcements(id) ON DELETE CASCADE,
+                channel_id TEXT,
+                channel_name TEXT,
+                message_id INTEGER,
+                posted_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
         await conn.execute("""
             ALTER TABLE announcements 
             ADD COLUMN IF NOT EXISTS channel_id TEXT,
             ADD COLUMN IF NOT EXISTS channel_name TEXT
         """)
-        # Counter for announcement numbers
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS announcement_counter (
                 id SERIAL PRIMARY KEY,
@@ -296,7 +295,8 @@ async def get_user_announcements(user_id: int):
     conn = await get_db()
     try:
         rows = await conn.fetch(
-            "SELECT * FROM announcements WHERE user_id = $1 ORDER BY created_at DESC", user_id
+            "SELECT * FROM announcements WHERE user_id = $1 AND name_age IS NOT NULL ORDER BY created_at DESC", 
+            user_id
         )
         return [dict(row) for row in rows]
     finally:
@@ -315,6 +315,37 @@ async def update_announcement_status(ann_id: int, status: str, message_id: int =
                 "UPDATE announcements SET status = $1 WHERE id = $2",
                 status, ann_id
             )
+    finally:
+        await conn.close()
+
+async def add_posted_channel(ann_id: int, channel_id: str, channel_name: str, message_id: int):
+    conn = await get_db()
+    try:
+        await conn.execute(
+            "INSERT INTO posted_channels (announcement_id, channel_id, channel_name, message_id) VALUES ($1, $2, $3, $4)",
+            ann_id, channel_id, channel_name, message_id
+        )
+    finally:
+        await conn.close()
+
+async def get_posted_channels(ann_id: int):
+    conn = await get_db()
+    try:
+        rows = await conn.fetch(
+            "SELECT * FROM posted_channels WHERE announcement_id = $1",
+            ann_id
+        )
+        return [dict(row) for row in rows]
+    finally:
+        await conn.close()
+
+async def delete_posted_channels(ann_id: int):
+    conn = await get_db()
+    try:
+        await conn.execute(
+            "DELETE FROM posted_channels WHERE announcement_id = $1",
+            ann_id
+        )
     finally:
         await conn.close()
 
@@ -338,7 +369,7 @@ def get_compatibility_text(zodiac_key: str) -> tuple:
     return mos_text, qiyin_text
 
 def format_announcement(data: dict, ann_number: int = None, channel_key: str = "ch1") -> str:
-    ann_type = data.get("announcement_type", "")
+    ann_type = data.get("announcement_type") or ""
     num_str = f" №{ann_number}" if ann_number else ""
 
     if "kuyov" in ann_type:
@@ -374,7 +405,7 @@ def format_announcement(data: dict, ann_number: int = None, channel_key: str = "
     text += "</i>\n"
     text += "<b>💍 JUFTIDA IZLAYOTGAN SIFATLAR:</b>\n"
     text += "<i>"
-    text += f"<b>Yosh chegarasi:</b> {data.get('partner_age', '---')}\n"
+    text += f"<b>Yosh shegarasi:</b> {data.get('partner_age', '---')}\n"
     text += f"<b>Millati:</b> {data.get('partner_nationality', '---')}\n"
     text += f"<b>Ko'rinishi:</b> {data.get('partner_body', '---')}\n"
     text += f"<b>Ma'lumoti:</b> {data.get('partner_education', '---')}\n"
@@ -951,7 +982,6 @@ async def process_channel_confirm(callback: CallbackQuery, state: FSMContext, bo
     ann_id = data.get("ann_id")
     ann_data = await get_announcement(ann_id)
 
-    # Get next announcement number
     ann_number = await get_next_announcement_number()
 
     photo_file_id = ann_data.get("photo_file_id", "")
@@ -980,8 +1010,8 @@ async def process_channel_confirm(callback: CallbackQuery, state: FSMContext, bo
                 msg = await bot.send_message(ch_id, text, parse_mode="HTML")
 
             success_channels.append(ch_name)
+            await add_posted_channel(ann_id, ch_id, ch_name, msg.message_id)
 
-            # Save first channel info to DB
             if len(success_channels) == 1:
                 await update_announcement_status(ann_id, "approved", msg.message_id, ch_id, ch_name)
 
@@ -1038,8 +1068,12 @@ async def cancel_process(callback: CallbackQuery, state: FSMContext):
     )
 
 
+# ============================================================
+# MENING E'LONLARIM
+# ============================================================
 async def _show_single_announcement(callback_or_message, bot: Bot, ann: dict, from_list: bool = True):
     ann_number = ann.get("id")
+
     channel_key = "ch1"
     for ch_key, ch_info in CHANNELS.items():
         if ch_info.get("name") == ann.get("channel_name"):
@@ -1050,9 +1084,10 @@ async def _show_single_announcement(callback_or_message, bot: Bot, ann: dict, fr
     text = f"<b>📋 E'lon #{ann['id']}</b>\n\n{text}"
 
     photo_file_id = ann.get("photo_file_id", "")
+
     kb = []
     status = ann.get("status", "pending")
-    if status == "approved" and ann.get("message_id") and ann.get("channel_id"):
+    if status == "approved":
         kb.append([InlineKeyboardButton(text="🗑 E'lonni o'chirish", callback_data=f"delann_{ann['id']}")])
 
     if from_list:
@@ -1062,7 +1097,6 @@ async def _show_single_announcement(callback_or_message, bot: Bot, ann: dict, fr
 
     markup = InlineKeyboardMarkup(inline_keyboard=kb)
 
-    # Rasm bo'lsa - eski xabarni o'chirish va yangi rasm yuborish
     if is_valid_file_id(photo_file_id):
         try:
             if hasattr(callback_or_message, 'message'):
@@ -1093,7 +1127,6 @@ async def _show_single_announcement(callback_or_message, bot: Bot, ann: dict, fr
         except Exception:
             pass
 
-    # Matn bilan - edit yoki send
     try:
         if hasattr(callback_or_message, 'message'):
             await callback_or_message.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
@@ -1114,6 +1147,7 @@ async def _show_single_announcement(callback_or_message, bot: Bot, ann: dict, fr
                 reply_markup=markup,
                 parse_mode="HTML"
             )
+
 
 @router.callback_query(F.data == "my_announcements")
 async def my_announcements(callback: CallbackQuery, bot: Bot):
@@ -1142,7 +1176,6 @@ async def my_announcements(callback: CallbackQuery, bot: Bot):
 
     kb.append([InlineKeyboardButton(text="🔙 Asosiy menyu", callback_data="back_main")])
 
-    # Rasm xabar bo'lsa edit_text ishlamaydi - o'chirib yangi yuborish
     try:
         await callback.message.edit_text(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=kb), parse_mode="HTML")
     except Exception:
@@ -1182,6 +1215,17 @@ async def delete_announcement(callback: CallbackQuery, bot: Bot):
         await callback.answer("Bu e'lon allaqachon o'chirilgan!", show_alert=True)
         return
 
+    posted_channels = await get_posted_channels(ann_id)
+    deleted_count = 0
+
+    for pc in posted_channels:
+        try:
+            if pc.get("message_id") and pc.get("channel_id"):
+                await bot.delete_message(pc["channel_id"], pc["message_id"])
+                deleted_count += 1
+        except Exception:
+            pass
+
     try:
         if ann.get("message_id") and ann.get("channel_id"):
             await bot.delete_message(ann["channel_id"], ann["message_id"])
@@ -1189,8 +1233,11 @@ async def delete_announcement(callback: CallbackQuery, bot: Bot):
         pass
 
     await update_announcement_status(ann_id, "deleted")
-    await callback.answer("E'lon kanaldan o'chirildi!")
+    await delete_posted_channels(ann_id)
+
+    await callback.answer(f"E'lon {deleted_count} ta kanaldan o'chirildi!")
     await my_announcements(callback, bot)
+
 
 @router.callback_query(F.data == "back_main")
 async def back_to_main(callback: CallbackQuery):
