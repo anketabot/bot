@@ -295,12 +295,13 @@ async def get_user_announcements(user_id: int):
     conn = await get_db()
     try:
         rows = await conn.fetch(
-            "SELECT * FROM announcements WHERE user_id = $1 AND name_age IS NOT NULL ORDER BY created_at DESC", 
+            "SELECT * FROM announcements WHERE user_id = $1 AND name_age IS NOT NULL AND status != 'deleted' ORDER BY created_at DESC", 
             user_id
         )
         return [dict(row) for row in rows]
     finally:
         await conn.close()
+        
 
 async def update_announcement_status(ann_id: int, status: str, message_id: int = None, channel_id: str = None, channel_name: str = None):
     conn = await get_db()
