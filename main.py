@@ -78,15 +78,15 @@ ZODIAC_COMPATIBILITY = {
         "qiyin": ["qisqichbaqa", "chayon", "baliq"]
     },
     "buzoq": {
-        "mos": ["sunbula", "tog_echkisi", "baliq"],
-        "qiyin": ["qisqichbaqa", "chayon", "baliq"]
+        "mos": ["sunbula", "qisqichbaqa", "togʻ echkisi"],
+        "qiyin": ["egizak", "oʻqotar", "qovgʻa"]
     },
     "egizak": {
         "mos": ["qoy", "tarozi", "qovga"],
-        "qiyin": ["buzoq", "chayon", "tog_echkisi"]
+        "qiyin": ["buzoq", "chayon", "togʻ echkisi"]
     },
     "qisqichbaqa": {
-        "mos": ["buzoq", "tog_echkisi", "baliq"],
+        "mos": ["buzoq", "baliq", "chayon"],
         "qiyin": ["qoy", "egizak", "oqotar"]
     },
     "arslon": {
@@ -94,32 +94,32 @@ ZODIAC_COMPATIBILITY = {
         "qiyin": ["buzoq", "tog_echkisi", "baliq"]
     },
     "sunbula": {
-        "mos": ["buzoq", "tog_echkisi", "baliq"],
-        "qiyin": ["qisqichbaqa", "chayon", "qovga"]
+        "mos": ["buzoq", "togʻ echkisi", "chayon"],
+        "qiyin": ["egizak", "arslon", "oʻqotar"]
     },
     "tarozi": {
-        "mos": ["qoy", "egizak", "qovga"],
-        "qiyin": ["chayon", "tog_echkisi", "baliq"]
+        "mos": ["egizak", "arslon", "qovgʻa"],
+        "qiyin": ["chayon", "qisqichbaqa", "togʻ echkisi"]
     },
     "chayon": {
-        "mos": ["buzoq", "qisqichbaqa", "tog_echkisi"],
-        "qiyin": ["qoy", "arslon", "qovga"]
+        "mos": ["qisqichbaqa", "baliq", "buzoq"],
+        "qiyin": ["egizak", "qoʻy", "tarozi"]
     },
     "oqotar": {
-        "mos": ["qoy", "egizak", "qovga"],
-        "qiyin": ["buzoq", "qisqichbaqa", "tog_echkisi"]
+        "mos": ["qoʻy", "arslon", "qovga"],
+        "qiyin": ["buzoq", "qisqichbaqa", "togʻ echkisi"]
     },
     "tog_echkisi": {
-        "mos": ["buzoq", "sunbula", "qisqichbaqa"],
-        "qiyin": ["qoy", "arslon", "egizak"]
+        "mos": ["buzoq", "sunbula", "chayon"],
+        "qiyin": ["egizak", "tarozi", "oʻqotar"]
     },
     "qovga": {
-        "mos": ["qoy", "egizak", "tarozi"],
-        "qiyin": ["buzoq", "chayon", "tog_echkisi"]
+        "mos": ["oʻqotar", "egizak", "tarozi"],
+        "qiyin": ["buzoq", "chayon", "qisqichbaqa"]
     },
     "baliq": {
-        "mos": ["buzoq", "qisqichbaqa", "sunbula"],
-        "qiyin": ["qoy", "egizak", "qovga"]
+        "mos": ["buzoq", "qisqichbaqa", "chayon"],
+        "qiyin": ["qoy", "egizak", "arslon"]
     }
 }
 
