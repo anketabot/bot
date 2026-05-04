@@ -547,7 +547,7 @@ async def cmd_start(message: Message):
     )
     text = (
         "<b>Assalomu alaykum!</b> 👋\n\n"
-        "<b>@sovchirr</b> kanalining rasmiy botiga xush kelibsiz!\n\n"
+        "Sovchilar kanalining rasmiy botiga xush kelibsiz!\n\n"
         "Bu bot orqali siz o'zingiz haqingizda e'lon berishingiz mumkin.\n\n"
         "E'lon berish uchun quyidagi tugmani bosing:"
     )
