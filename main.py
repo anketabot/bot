@@ -388,7 +388,7 @@ def format_announcement(data: dict, ann_number: int = None, channel_key: str = "
     ch_name = ch_info.get("name", "@sovchirr")
 
     # BARCHA MATN QIYA (italic) ichida
-    text = f"<i><b>{header}</b>\n\n"
+    text = f"<i><b>{header}</b>\n"
     text += f"<b>Ismi va yoshi:</b> {data.get('name_age', '---')}\n"
     text += f"<b>Millati:</b> {data.get('nationality', '---')}\n"
     text += f"<b>Bo'yi va vazni:</b> {data.get('height_weight', '---')}\n"
@@ -412,7 +412,7 @@ def format_announcement(data: dict, ann_number: int = None, channel_key: str = "
     text += f"<b>Talablaringiz:</b> {data.get('partner_other', '---')}\n"
     text += f"<b>Aloqa uchun:</b> {data.get('contact', '---')}\n"
     text += f"<b>Anketa to'ldirish: @AnketaYozing_bot</b>\n"
-    text += f"<b>KANALGA OBUNA BO'LISH</b> {ch_name}</i>"
+    text += f"<b>OBUNA BO'LISH</b> {ch_name}</i>"
     return text
     
 
